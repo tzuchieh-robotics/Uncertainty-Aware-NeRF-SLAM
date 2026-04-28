@@ -24,7 +24,7 @@ Siting Zhu*, Guangming Wang*, Hermann Blum, Jiuming Liu, Liang Song, Marc Pollef
   <img src="./demo/entropy.png" alt="High Entropy" width="45%">
   &nbsp;&nbsp;
   <img src="./demo/low_entropy.png" alt="Low Entropy" width="45%"><br>
-  <em>Left: High entropy (uncertain regions) &nbsp;&nbsp; Right: Low entropy (confident regions)</em>
+  <em>Left: High entropy (uncertain frames) &nbsp;&nbsp; Right: Low entropy (confident frames)</em>
 </p>
 
 ## Our Contribution
