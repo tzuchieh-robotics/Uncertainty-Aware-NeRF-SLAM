@@ -15,6 +15,26 @@ Siting Zhu*, Guangming Wang*, Hermann Blum, Jiuming Liu, Liang Song, Marc Pollef
   </a>
 </p>
 
+<p align="center">
+  <img src="./demo/ATE.png" alt="Trajectory Comparison (ATE)" width="80%"><br>
+  <em>Trajectory comparison before and after our modification</em>
+</p>
+
+<p align="center">
+  <img src="./demo/entropy.png" alt="High Entropy" width="45%">
+  &nbsp;&nbsp;
+  <img src="./demo/low_entropy.png" alt="Low Entropy" width="45%"><br>
+  <em>Left: High entropy (uncertain regions) &nbsp;&nbsp; Right: Low entropy (confident regions)</em>
+</p>
+
+## Our Contribution
+
+NeRF (Neural Representation Field) has become powerful and trending in representing 3D environments. Recent works leverage its capability in SLAM (Simultaneous Localization and Mapping) to reconstruct environments and localize camera positions simultaneously. However, performing online SLAM needs to be fast while accurate given a fixed number of samples; making the best use of information from limited samples is vital for final results.
+
+In this project, we incorporate **uncertainty with covisibility** in updating NeRF, which results in better localization accuracy compared to the original SNI-SLAM implementation. Furthermore, we **vectorized the uncertainty calculation process** to make it applicable in real time.
+
+For more details, please refer to our [project page](https://stunning-syrniki-05e831.netlify.app/).
+
 ## Installation
 
 First you have to make sure that you have all dependencies in place.
@@ -36,7 +56,6 @@ and you can run SNI-SLAM:
 python -W ignore run.py configs/Replica/room1.yaml
 ```
 The mesh for evaluation is saved as `$OUTPUT_FOLDER/mesh/final_mesh_eval_rec_culled.ply`
-
 
 ## Evaluation
 
