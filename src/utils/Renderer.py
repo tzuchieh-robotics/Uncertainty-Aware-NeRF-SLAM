@@ -69,14 +69,12 @@ class Renderer(object):
         t_vals_uni = torch.linspace(0., 1., steps=n_stratified, device=device)
         t_vals_surface = torch.linspace(0., 1., steps=n_importance, device=device)
 
-        ### pixels with gt depth:
         gt_depth = gt_depth.reshape(-1, 1)
         gt_mask = (gt_depth > 0).squeeze()
         gt_nonezero = gt_depth[gt_mask]
 
-        ## Sampling points around the gt depth (surface)
         gt_depth_surface = gt_nonezero.expand(-1, n_importance)
-        z_vals_surface = gt_depth_surface - (1.5 * truncation)  + (3 * truncation * t_vals_surface)
+        z_vals_surface = gt_depth_surface - (1.5 * truncation) + (3 * truncation * t_vals_surface)
 
         gt_depth_free = gt_nonezero.expand(-1, n_stratified)
         z_vals_free = near + 1.2 * gt_depth_free * t_vals_uni
@@ -86,14 +84,13 @@ class Renderer(object):
             z_vals_nonzero = self.perturbation(z_vals_nonzero)
         z_vals[gt_mask] = z_vals_nonzero
 
-        # pixels without gt depth (importance sampling):
         if not gt_mask.all():
             with torch.no_grad():
                 rays_o_uni = rays_o[~gt_mask].detach()
                 rays_d_uni = rays_d[~gt_mask].detach()
-                det_rays_o = rays_o_uni.unsqueeze(-1)  # (N, 3, 1)
-                det_rays_d = rays_d_uni.unsqueeze(-1)  # (N, 3, 1)
-                t = (self.bound.unsqueeze(0) - det_rays_o)/det_rays_d  # (N, 3, 2)
+                det_rays_o = rays_o_uni.unsqueeze(-1)
+                det_rays_d = rays_d_uni.unsqueeze(-1)
+                t = (self.bound.unsqueeze(0) - det_rays_o)/det_rays_d
                 far_bb, _ = torch.min(torch.max(t, dim=2)[0], dim=1)
                 far_bb = far_bb.unsqueeze(-1)
                 far_bb += 0.01
@@ -107,48 +104,45 @@ class Renderer(object):
                 sdf_uni, _ = decoders.get_raw_sdf(pts_uni_nor, all_planes[:6])
                 sdf_uni = sdf_uni.reshape(*pts_uni.shape[0:2])
                 alpha_uni = self.sdf2alpha(sdf_uni, decoders.beta)
-                weights_uni = alpha_uni * torch.cumprod(torch.cat([torch.ones((alpha_uni.shape[0], 1), device=device)
-                                                        , (1. - alpha_uni + 1e-10)], -1), -1)[:, :-1]
+                weights_uni = alpha_uni * torch.cumprod(
+                    torch.cat([torch.ones((alpha_uni.shape[0], 1), device=device),
+                            (1. - alpha_uni + 1e-10)], -1), -1)[:, :-1]
 
                 z_vals_uni_mid = .5 * (z_vals_uni[..., 1:] + z_vals_uni[..., :-1])
-                z_samples_uni = sample_pdf(z_vals_uni_mid, weights_uni[..., 1:-1], n_importance, det=False, device=device)
+                z_samples_uni = sample_pdf(z_vals_uni_mid, weights_uni[..., 1:-1],
+                                        n_importance, det=False, device=device)
                 z_vals_uni, ind = torch.sort(torch.cat([z_vals_uni, z_samples_uni], -1), -1)
                 z_vals[~gt_mask] = z_vals_uni
 
-        pts = rays_o[..., None, :] + rays_d[..., None, :] * \
-              z_vals[..., :, None]
+        pts = rays_o[..., None, :] + rays_d[..., None, :] * z_vals[..., :, None]
 
         if return_emb:
             sem_feats = sem_feats.unsqueeze(1)
             sem_feats = sem_feats.expand(-1, pts.shape[1], -1)
-
             rgb_feats = rgb_feats.unsqueeze(1)
             rgb_feats = rgb_feats.expand(-1, pts.shape[1], -1)
-
             depth_feats = self.model_manager.encoder(pts)
-
             sem_fused_feat, rgb_fused_feat = self.model_manager.feat_fusion(sem_feats, depth_feats, rgb_feats)
             fused_feat = torch.cat([rgb_fused_feat, depth_feats, sem_fused_feat], dim=2)
             fused_feat = fused_feat.reshape(-1, fused_feat.shape[-1])
 
         raw, plane_feat = decoders(pts, all_planes)
         alpha = self.sdf2alpha(raw[..., 3], decoders.beta)
-        weights = alpha * torch.cumprod(torch.cat([torch.ones((alpha.shape[0], 1), device=device)
-                                                ,(1. - alpha + 1e-10)], -1), -1)[:, :-1]
+        weights = alpha * torch.cumprod(
+            torch.cat([torch.ones((alpha.shape[0], 1), device=device),
+                    (1. - alpha + 1e-10)], -1), -1)[:, :-1]
 
         rendered_rgb = torch.sum(weights[..., None] * raw[..., :3], -2)
         rendered_depth = torch.sum(weights * z_vals, -1)
         rendered_semantic = torch.sum(weights[..., None].detach() * raw[..., 4:], -2)
 
         if self.enable_wandb:
-            log_dict = {
-                "beta": decoders.beta.detach().item()
-            }
-
+            log_dict = {"beta": decoders.beta.detach().item()}
             log_dict["semantic_beta"] = decoders.semantic_beta.detach().item()
             self.wandb_run.log(log_dict)
 
-        return (rendered_depth, rendered_rgb, raw[..., 3], z_vals, fused_feat if return_emb else None,
+        return (rendered_depth, rendered_rgb, raw[..., 3], z_vals,
+                fused_feat if return_emb else None,
                 plane_feat if return_emb else None, rendered_semantic)
 
     def sdf2alpha(self, sdf, beta=10):

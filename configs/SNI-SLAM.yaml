@@ -92,8 +92,8 @@ model:
     multires: 6
   cnn:
     n_classes: 52
-    pretrained_model_path: '/data0/nerf/sni-slam/seg/dinov2_replica.pth'
-  path: '/data0/nerf/sni-slam/seg/'
+    pretrained_model_path: "/home/tzuchieh/SNI-SLAM/seg/dinov2_replica.pth"
+  path: "/home/tzuchieh/SNI-SLAM/seg"
 
 func:
   use_gt_semantic: False
